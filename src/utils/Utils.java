@@ -4,11 +4,18 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -304,5 +311,41 @@ public class Utils {
 		String windowName = allHandleWindows.get(targetWindow);
 		driver.switchTo().window(windowName);
 		System.out.println("*** Switch to: " + targetWindow + ": " + windowName + " : " + driver.getCurrentUrl());
+	}
+
+	public HashMap<String, List<String>> parseQueryUrl(URL url) throws UnsupportedEncodingException {
+		final HashMap<String, List<String>> query_pairs = new LinkedHashMap<String, List<String>>();
+		final String[] pairs = url.getQuery().split("&");
+		for (String pair : pairs) {
+			final int idx = pair.indexOf("=");
+			final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), "UTF-8") : pair;
+			if (!query_pairs.containsKey(key)) {
+				query_pairs.put(key, new LinkedList<String>());
+			}
+			final String value = idx > 0 && pair.length() > idx + 1
+					? URLDecoder.decode(pair.substring(idx + 1), "UTF-8")
+					: null;
+			query_pairs.get(key).add(value);
+		}
+		return query_pairs;
+	}
+
+	public HashMap<String, List<String>> parseQueryUrl(String url)
+			throws UnsupportedEncodingException, MalformedURLException {
+		URL queryURL = new URL(url);
+		final HashMap<String, List<String>> query_pairs = new LinkedHashMap<String, List<String>>();
+		final String[] pairs = queryURL.getQuery().split("&");
+		for (String pair : pairs) {
+			final int idx = pair.indexOf("=");
+			final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), "UTF-8") : pair;
+			if (!query_pairs.containsKey(key)) {
+				query_pairs.put(key, new LinkedList<String>());
+			}
+			final String value = idx > 0 && pair.length() > idx + 1
+					? URLDecoder.decode(pair.substring(idx + 1), "UTF-8")
+					: null;
+			query_pairs.get(key).add(value);
+		}
+		return query_pairs;
 	}
 }
