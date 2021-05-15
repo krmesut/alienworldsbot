@@ -31,7 +31,7 @@ public class AccountsCenter {
 			HashMap<String, PlayerProfile> accs = new HashMap<String, PlayerProfile>();
 			PlayerProfile profile = accounts.get(accountEmail);
 			if (profile == null) {
-				profile = new PlayerProfile("", "");
+				profile = new PlayerProfile("", "", "");
 			}
 			accs.put(accountEmail, profile);
 			return accs;

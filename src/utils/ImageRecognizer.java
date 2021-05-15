@@ -8,11 +8,13 @@ import org.sikuli.script.Image;
 import org.sikuli.script.Match;
 import org.sikuli.script.Pattern;
 
+import entities.gameflow.GameScreens;
+
 public class ImageRecognizer {
 
 	public ArrayList<int[]> findImage(String searchImg, String toSearchImgPath) {
 		ArrayList<int[]> matchedCoordinates = new ArrayList<>();
-//		toSearchImgPath = getClass().getResource(File.separator + "screenshot.png").getPath();
+//		toSearchImgPath = getClass().getResource(File.separator + "screenshot18108648223229223885hj.png").getPath();
 		System.out.println(" --- search image: " + getClass().getResource(File.separator + searchImg).getPath());
 		System.out.println(" ---  to search image: " + toSearchImgPath);
 		// sikuliX 2.0.5 will fix the issue. Using "Image.create()" is a workaround for
@@ -39,5 +41,45 @@ public class ImageRecognizer {
 			}
 		}
 		return matchedCoordinates;
+	}
+
+//	public GameScreens getCurrentGameScreen(String toSearchImgPath) {
+//		
+//	}
+
+	public boolean isOnScreen(GameScreens targetScreen, String toSearchImgPath) {
+		switch (targetScreen) {
+		case HOME: {
+			if (findImage("btnLogout.png", toSearchImgPath).size() > 0
+					&& findImage("btnInventory.png", toSearchImgPath).size() > 0
+					&& findImage("btnMine.png", toSearchImgPath).size() > 0
+					&& findImage("profileIcon.png", toSearchImgPath).size() > 0) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		case MINING_HUB: {
+			if (findImage("btnBack.png", toSearchImgPath).size() > 0
+					&& findImage("profileIcon.png", toSearchImgPath).size() > 0
+					&& findImage("MiningHubHeader.png", toSearchImgPath).size() > 0
+					&& (findImage("btnMineBottom.png", toSearchImgPath).size() > 0
+							|| findImage("btnClaimBottom.png", toSearchImgPath).size() > 0)) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		case MINING_IN_PROGRESS: {
+			if (findImage("btnConfigBig.png", toSearchImgPath).size() > 0
+					&& findImage("btnHomeBig.png", toSearchImgPath).size() > 0) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		default:
+			return false;
+		}
 	}
 }

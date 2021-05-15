@@ -12,6 +12,7 @@ import org.openqa.selenium.WebElement;
 
 import controllers.LogController;
 import entities.PlayerProfile;
+import entities.gameflow.GameScreens;
 import entities.gameflow.WindowTypes;
 import entities.logs.LogMessageTypes;
 
@@ -97,8 +98,7 @@ public class WaitFor {
 		}
 	}
 
-	public ArrayList<int[]> waitForMatchedCoordinatesByImage(WebElement element, String imageName,
-			PlayerProfile profile) throws Exception {
+	public ArrayList<int[]> waitForMatchedCoordinatesByImage(WebElement element, String imageName) throws Exception {
 		ImageRecognizer ir = new ImageRecognizer();
 		Utils utils = new Utils();
 		while (true) {
@@ -106,7 +106,7 @@ public class WaitFor {
 			LogController.showLog(null, message, LogMessageTypes.WARNING);
 
 			String toSearchImagePath = "";
-			toSearchImagePath = utils.takeScreenshotOfAParticularElement(profile.getUsername(), element);
+			toSearchImagePath = utils.takeScreenshotOf(element);
 			ArrayList<int[]> matchedCoordinates = ir.findImage(imageName, toSearchImagePath);
 			if (matchedCoordinates.size() > 0) {
 				return matchedCoordinates;
@@ -116,6 +116,27 @@ public class WaitFor {
 
 			Thread.sleep(tickIntervalInMiliseconds);
 			throwError("waitForMatchedCoordinatesByImage: " + imageName);
+		}
+	}
+
+	public boolean waitForScreenToAppear(WebElement element, GameScreens screen) throws Exception {
+		ImageRecognizer ir = new ImageRecognizer();
+		Utils utils = new Utils();
+		while (true) {
+			String message = "\n=== Checking for visibility of screen: " + screen;
+			LogController.showLog(null, message, LogMessageTypes.WARNING);
+
+			String toSearchImagePath = "";
+			toSearchImagePath = utils.takeScreenshotOf(element);
+			boolean isScreenAppear = ir.isOnScreen(screen, toSearchImagePath);
+			if (isScreenAppear) {
+				return true;
+			} else {
+				timeoutDeduction();
+			}
+
+			Thread.sleep(tickIntervalInMiliseconds);
+			throwError("waitForScreenToAppear: " + screen);
 		}
 	}
 

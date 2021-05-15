@@ -26,6 +26,9 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.border.TitledBorder;
 
+import org.openqa.selenium.Dimension;
+import org.openqa.selenium.WebDriver;
+
 import controllers.AccountsCenter;
 import controllers.DriverCenter;
 import controllers.MiningCenter;
@@ -36,6 +39,7 @@ public class AlienWorldsBot {
 	private JTextField txtHostField;
 	private JTextField txtUsername;
 	private JTextField txtPassword;
+	private JTextField txtProfilePath;
 
 	/**
 	 * Launch the application.
@@ -67,7 +71,6 @@ public class AlienWorldsBot {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 450, 300);
 		frame.setTitle("KC33");
-		frame.setBounds(100, 100, 1200, 600);
 		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frame.addWindowListener(new java.awt.event.WindowAdapter() {
 			@Override
@@ -156,7 +159,7 @@ public class AlienWorldsBot {
 			{
 				JPanel panelAccountDetails = new JPanel();
 				panelAccounts.add(panelAccountDetails);
-				panelAccountDetails.setLayout(new GridLayout(2, 1, 0, 0));
+				panelAccountDetails.setLayout(new GridLayout(3, 1, 0, 0));
 				{
 					JPanel panelUsername = new JPanel();
 					panelAccountDetails.add(panelUsername);
@@ -176,7 +179,8 @@ public class AlienWorldsBot {
 						panelUsernameField.setLayout(new GridLayout(0, 1, 0, 0));
 						{
 							txtUsername = new JTextField();
-							txtUsername.setText("vevig90439@animex98.com");
+//							txtUsername.setText("vevig90439@animex98.com");
+							txtUsername.setText("vietlh82@gmail.com");
 							panelUsernameField.add(txtUsername);
 							txtUsername.setColumns(10);
 						}
@@ -201,9 +205,34 @@ public class AlienWorldsBot {
 						panelPasswordField.setLayout(new GridLayout(0, 1, 0, 0));
 						{
 							txtPassword = new JTextField();
-							txtPassword.setText("Aa!@#456");
+							txtPassword.setText("Qq!@#456");
 							panelPasswordField.add(txtPassword);
 							txtPassword.setColumns(10);
+						}
+					}
+				}
+				{
+					JPanel panelProfilePath = new JPanel();
+					panelAccountDetails.add(panelProfilePath);
+					panelProfilePath.setLayout(new GridLayout(0, 2, 0, 0));
+					{
+						JPanel panelProfilePathTitle = new JPanel();
+						panelProfilePath.add(panelProfilePathTitle);
+						panelProfilePathTitle.setLayout(new GridLayout(0, 1, 0, 0));
+						{
+							JLabel lblProfilePathTitle = new JLabel("Profile Path:");
+							panelProfilePathTitle.add(lblProfilePathTitle);
+						}
+					}
+					{
+						JPanel panelProfilePathField = new JPanel();
+						panelProfilePath.add(panelProfilePathField);
+						panelProfilePathField.setLayout(new GridLayout(0, 1, 0, 0));
+						{
+							txtProfilePath = new JTextField();
+							txtProfilePath.setText("/Users/vietlh/Library/Application Support/Google/Chrome/Profile 4");
+							panelProfilePathField.add(txtProfilePath);
+							txtProfilePath.setColumns(10);
 						}
 					}
 				}
@@ -227,8 +256,11 @@ public class AlienWorldsBot {
 		// update accounts before starting
 		updateAccount();
 		for (String email : AccountsCenter.getAllAccounts().keySet()) {
-			MiningCenter mining = new MiningCenter(txtHostField.getText().trim().toLowerCase(),
-					AccountsCenter.getAccount(email));
+			PlayerProfile profile = AccountsCenter.getAccount(email);
+			WebDriver driver = initDriver(profile);
+			// open the game
+			driver.navigate().to(txtHostField.getText().trim().toLowerCase());
+			MiningCenter mining = new MiningCenter(driver, profile);
 			Thread mineThread = new Thread(mining);
 			mineThread.start();
 		}
@@ -236,7 +268,26 @@ public class AlienWorldsBot {
 
 	private void updateAccount() {
 		PlayerProfile profile = new PlayerProfile(txtUsername.getText().trim().toLowerCase(),
-				txtPassword.getText().trim().toLowerCase());
+				txtPassword.getText().trim(), txtProfilePath.getText().trim());
 		AccountsCenter.addAccount(profile);
+	}
+
+	private WebDriver initDriver(PlayerProfile profile) {
+		WebDriver driver = null;
+		RunningDriver runningDriver = new RunningDriver();
+		try {
+			driver = runningDriver.chromeDriver(profile.getProfilePath());
+			resizeBrowser(driver, 800, 600);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return driver;
+	}
+
+	private void resizeBrowser(WebDriver driver, int width, int height) {
+		Dimension d = new Dimension(width, height);
+		// Resize current window to the set dimension
+		driver.manage().window().setSize(d);
 	}
 }

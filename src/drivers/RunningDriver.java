@@ -41,4 +41,16 @@ public class RunningDriver {
 		DriverCenter.appendDriver(driver);
 		return driver;
 	}
+
+	public WebDriver chromeDriver(String pathToProfileDir) throws IOException {
+		System.setProperty("webdriver.chrome.driver", pathToChromeDriver());
+		ChromeOptions options = new ChromeOptions();
+		options.addArguments("--user-data-dir=" + pathToProfileDir);
+		options.addArguments("--disable-extensions");
+		options.addArguments("--disable-browser-side-navigation");
+		options.addArguments("--disable-gpu");
+		WebDriver driver = new ChromeDriver(options);
+		DriverCenter.appendDriver(driver);
+		return driver;
+	}
 }

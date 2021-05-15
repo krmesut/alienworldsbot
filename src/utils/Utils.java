@@ -25,6 +25,7 @@ import javax.swing.ImageIcon;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.NoSuchWindowException;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -36,12 +37,17 @@ import entities.logs.LogMessageTypes;
 
 public class Utils {
 
-	public void javascriptExecuter(WebDriver driver, String script) {
+	public String javascriptExecuter(WebDriver driver, String script) {
 		if (driver instanceof JavascriptExecutor) {
-			((JavascriptExecutor) driver).executeScript(script);
+			String result = (String) ((JavascriptExecutor) driver).executeScript(script);
+			return result;
 		} else {
 			throw new IllegalStateException("This driver does not support JavaScript!");
 		}
+	}
+
+	public String getCurrentFrame(WebDriver driver) {
+		return javascriptExecuter(driver, "return self.name");
 	}
 
 	public void scrollToElement(WebElement element, WebDriver driver) {
@@ -251,7 +257,12 @@ public class Utils {
 		File ss = element.getScreenshotAs(OutputType.FILE);
 		System.out.println("-- SS path: " + ss.getAbsolutePath());
 		String pathToScreenshot = copyFileToTempDir(ss.toPath(), fileName);
-//		return pathToScreenshot;
+		return pathToScreenshot;
+	}
+
+	public String takeScreenshotOf(WebElement element) {
+		File ss = element.getScreenshotAs(OutputType.FILE);
+		System.out.println("-- SS path: " + ss.getAbsolutePath());
 		return ss.getAbsolutePath();
 	}
 
@@ -288,20 +299,25 @@ public class Utils {
 		Set<String> allWindows = driver.getWindowHandles();
 		System.out.println("*** Updating All Handle Windows: " + allWindows.size());
 		for (String windowName : allWindows) {
-			driver.switchTo().window(windowName);
-			if (driver.findElements(By.xpath(xpathToCanvas)).size() > 0) {
-				allHandleWindows.put(WindowTypes.GAME, windowName);
-				System.out.println("*** " + WindowTypes.GAME + ": " + windowName + " : " + driver.getCurrentUrl());
-			} else if (driver.findElements(By.xpath(xpathToPasswordField)).size() > 0) {
-				allHandleWindows.put(WindowTypes.LOGIN_TO_GAME, windowName);
-				System.out.println(
-						"*** " + WindowTypes.LOGIN_TO_GAME + ": " + windowName + " : " + driver.getCurrentUrl());
-			} else if (driver.findElements(By.xpath(xpathToLoginWalletButton)).size() > 0) {
-				allHandleWindows.put(WindowTypes.LOGIN_TO_WALLET, windowName);
-				System.out.println(
-						"*** " + WindowTypes.LOGIN_TO_WALLET + ": " + windowName + " : " + driver.getCurrentUrl());
-			} else {
-				System.out.println("***  NONE : " + windowName + " : " + driver.getCurrentUrl());
+			try {
+				driver.switchTo().window(windowName);
+				if (driver.findElements(By.xpath(xpathToCanvas)).size() > 0) {
+					allHandleWindows.put(WindowTypes.GAME, windowName);
+					System.out.println("*** " + WindowTypes.GAME + ": " + windowName + " : " + driver.getCurrentUrl());
+				} else if (driver.findElements(By.xpath(xpathToPasswordField)).size() > 0) {
+					allHandleWindows.put(WindowTypes.LOGIN_TO_GAME, windowName);
+					System.out.println(
+							"*** " + WindowTypes.LOGIN_TO_GAME + ": " + windowName + " : " + driver.getCurrentUrl());
+				} else if (driver.findElements(By.xpath(xpathToLoginWalletButton)).size() > 0) {
+					allHandleWindows.put(WindowTypes.LOGIN_TO_WALLET, windowName);
+					System.out.println(
+							"*** " + WindowTypes.LOGIN_TO_WALLET + ": " + windowName + " : " + driver.getCurrentUrl());
+				} else {
+					System.out.println("***  NONE : " + windowName + " : " + driver.getCurrentUrl());
+				}
+			} catch (NoSuchWindowException e) {
+				// TODO: handle exception
+				e.printStackTrace();
 			}
 		}
 	}

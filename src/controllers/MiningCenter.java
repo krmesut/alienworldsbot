@@ -1,17 +1,24 @@
 package controllers;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
+import org.openqa.selenium.JavascriptException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 import drivers.RunningDriver;
 import entities.GeneralSettings;
 import entities.PlayerProfile;
+import entities.gameflow.GameScreens;
 import entities.gameflow.WindowTypes;
 import entities.http.HTTPContentTypes;
 import entities.http.HTTPMethods;
@@ -28,60 +35,48 @@ public class MiningCenter implements Runnable {
 	private WaitFor wait;
 	private HttpRequest request;
 	private UserActions action;
-	private String url;
 	private String xpathToCanvas = "//div[@id='unityContainer']/canvas[@id='#canvas']";
 
-	public MiningCenter(String url, PlayerProfile profile) {
+	public MiningCenter(WebDriver driver, PlayerProfile profile) {
 		// TODO Auto-generated constructor stub
 		this.profile = profile;
-		this.url = url;
+		this.driver = driver;
 	}
 
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		initDriver();
+		// initialize action
 		action = new UserActions(driver);
-		// open the game
-		driver.navigate().to(url);
 
-		while (!GeneralSettings.isStopRunning) {
-			try {
-				// wait for the game to load
-				wait = new WaitFor(20, 1);
-				wait.waitForWindowToAppear(driver, allHandleWindows, WindowTypes.GAME);
-				clickOnLoginButton();
-
-				// wait for the login window to appear
-				wait = new WaitFor(20, 1);
-				wait.waitForWindowToAppear(driver, allHandleWindows, WindowTypes.LOGIN_TO_GAME);
-				loginByEmail();
-
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
-
-	private void initDriver() {
-		RunningDriver runningDriver = new RunningDriver();
+//		while (!GeneralSettings.isStopRunning) {
 		try {
-			driver = runningDriver.chromeDriver();
+			// wait for the game to load
+			wait = new WaitFor(20, 1);
+			wait.waitForWindowToAppear(driver, allHandleWindows, WindowTypes.GAME);
+			clickOnLoginButton();
+			clickToOpenMiningHub();
+			clickToClaimTLM();
+			wait = new WaitFor(20);
+			wait.waitForWindowToAppear(driver, allHandleWindows, WindowTypes.LOGIN_TO_WALLET);
+			utils.switchToWindow(driver, allHandleWindows, WindowTypes.LOGIN_TO_WALLET);
+			for (WebElement checkbox : driver.findElements(By.xpath(
+					"//div[contains(@class,'authorize-transaction-container')]/div[contains(@class,'remember')]/label/span[contains(text(),'Always sign those transactions')]"))) {
+				checkbox.click();
+			}
+			String captchaResult = solveCaptcha();
+			String script = "document.getElementById('g-recaptcha-response').innerHTML='" + captchaResult + "';";
+			System.out.println("--- Script: " + script);
+			utils.javascriptExecuter(driver, script);
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		resizeBrowser(800, 600);
-	}
-
-	private void resizeBrowser(int width, int height) {
-		Dimension d = new Dimension(width, height);
-		// Resize current window to the set dimension
-		driver.manage().window().setSize(d);
+//		}
 	}
 
 	private WebElement getGameElement() throws Exception {
@@ -94,8 +89,26 @@ public class MiningCenter implements Runnable {
 		utils.switchToWindow(driver, allHandleWindows, WindowTypes.GAME);
 		// wait for Login button to appear
 		wait = new WaitFor(20, 3);
-		ArrayList<int[]> matchedCoordinates = wait.waitForMatchedCoordinatesByImage(getGameElement(), "btnLogin2.png",
-				profile);
+		ArrayList<int[]> matchedCoordinates = wait.waitForMatchedCoordinatesByImage(getGameElement(), "btnLogin2.png");
+		// click on the login button
+		action.clickOnMatchedCoordinate(matchedCoordinates.get(0), getGameElement());
+	}
+
+	private void clickToOpenMiningHub() throws Exception {
+		utils.switchToWindow(driver, allHandleWindows, WindowTypes.GAME);
+		// wait for Mine button to appear
+		wait = new WaitFor(20, 3);
+		ArrayList<int[]> matchedCoordinates = wait.waitForMatchedCoordinatesByImage(getGameElement(), "btnMine.png");
+		// click on the login button
+		action.clickOnMatchedCoordinate(matchedCoordinates.get(0), getGameElement());
+	}
+
+	private void clickToClaimTLM() throws Exception {
+		utils.switchToWindow(driver, allHandleWindows, WindowTypes.GAME);
+		// wait for Mine button to appear
+		wait = new WaitFor(20, 3);
+		ArrayList<int[]> matchedCoordinates = wait.waitForMatchedCoordinatesByImage(getGameElement(),
+				"btnClaimBottom.png");
 		// click on the login button
 		action.clickOnMatchedCoordinate(matchedCoordinates.get(0), getGameElement());
 	}
@@ -108,50 +121,109 @@ public class MiningCenter implements Runnable {
 		String xpathToReCaptchaCheckmark = "//div[contains(@id, 'rc-anchor-container')]/div[contains(@class, 'rc-anchor-content')]//div[contains(@class,'recaptcha-checkbox-checkmark')]";
 		String xpathToReCaptchaAnchor = "//div[contains(@id, 'rc-anchor-container')]/div[contains(@class, 'rc-anchor-content')]//div[contains(@class,'rc-anchor-center-container')]/div/span[@id = 'recaptcha-anchor']";
 		String xpathToReCaptchaiFrame = "//iframe[@title = 'reCAPTCHA']";
+		String xpathToRecaptchaOverlay = "//iframe[contains(@title,'recaptcha challenge')]";
+		String xpathToHiddenInput = "//input[contains(@id,'recaptcha-token')]";
+		String xpathToVerifyButton = "//div[contains(@id,'rc-imageselect')]/div[contains(@class,'rc-footer')]/div[contains(@class,'rc-controls')]/div/div[contains(@class,'verify-button-holder')]/button";
 
 		utils.switchToWindow(driver, allHandleWindows, WindowTypes.LOGIN_TO_GAME);
 
 		wait = new WaitFor(20);
 		wait.waitForVisibilityByXpath(driver, xpathToUsernamField);
-		System.out.println("--- Filling Username....");
+		System.out.println("--- Current frame: " + utils.getCurrentFrame(driver));
+		System.out.println("--- Filling Username...." + profile.getUsername());
 		WebElement usernameField = driver.findElement(By.xpath(xpathToUsernamField));
 		usernameField.clear();
 		usernameField.sendKeys(profile.getUsername());
 
-		System.out.println("--- Filling Password....");
+		System.out.println("--- Filling Password...." + profile.getPassword());
 		WebElement passwordField = driver.findElement(By.xpath(xpathToPasswordField));
 		passwordField.clear();
 		passwordField.sendKeys(profile.getPassword());
 
-		System.out.println("--- Clicking Captcha....");
-		driver.switchTo().frame(driver.findElement(By.xpath(xpathToVisibleReCaptchaiFrame)));
-		for (WebElement rcAnchor : driver.findElements(By.xpath(xpathToReCaptchaAnchor))) {
-			rcAnchor.click();
-		}
+//		System.out.println("--- Current frame: " + utils.getCurrentFrame(driver));
+//		String script = "document.getElementById('g-recaptcha-response').innerHTML='" + captchaResult + "';";
+//		System.out.println("--- Script: " + script);
+//		utils.javascriptExecuter(driver, script);
+//		script = "document.getElementById('g-recaptcha-response-1').innerHTML='" + captchaResult + "';";
+//		System.out.println("--- Script: " + script);
+//		utils.javascriptExecuter(driver, script);
 
+		// click to show captcha overlay
+//		System.out.println("--- Clicking Captcha....");
+//		driver.switchTo().frame(driver.findElement(By.xpath(xpathToVisibleReCaptchaiFrame)));
+//		for (WebElement rcAnchor : driver.findElements(By.xpath(xpathToReCaptchaAnchor))) {
+//			rcAnchor.click();
+//		}
+		// find the proper captcha iframe
+//		WebElement captchaFrame = null;
+//		int retries = 0;
+//		int maxRetries = 5;
+//		while (retries < maxRetries) {
+//			driver.switchTo().defaultContent();
+//			wait = new WaitFor(20);
+//			wait.waitForVisibilityByXpath(driver, xpathToRecaptchaOverlay);
+//			System.out.println("--- retry: " + retries);
+//			try {
+//				List<WebElement> allFrames = driver.findElements(By.xpath(xpathToRecaptchaOverlay));
+//				System.out.println("--- found " + allFrames.size() + " frame(s)");
+//				for (WebElement frame : allFrames) {
+//					System.out.println("--- found frame: " + frame.getAttribute("title"));
+//					driver.switchTo().frame(frame);
+//					for (WebElement hiddenInput : driver.findElements(By.xpath(xpathToHiddenInput))) {
+//						System.out.println("--- found hidden input: " + hiddenInput.getAttribute("value") + ".");
+//						String script = "document.getElementById('recaptcha-token').setAttribute('value', '"
+//								+ captchaResult + "');";
+//						utils.javascriptExecuter(driver, script);
+//						System.out.println("--- update hidden input: " + hiddenInput.getAttribute("value") + ".");
+//						if (hiddenInput.getAttribute("value").length() > 0) {
+//							captchaFrame = frame;
+//						}
+//					}
+//					driver.switchTo().defaultContent();
+//				}
+//				retries = maxRetries;
+//			} catch (StaleElementReferenceException stale) {
+//				// TODO: handle exception
+//				stale.printStackTrace();
+//				System.out.println("--- retrying.....");
+//				retries++;
+//			} catch (JavascriptException stale) {
+//				// TODO: handle exception
+//				stale.printStackTrace();
+//				System.out.println("--- retrying.....");
+//				retries++;
+//			}
+//		}
+
+		// switch to captch overlay and click on verify button
+//		driver.switchTo().frame(captchaFrame);
+//		for (WebElement btnVerify : driver.findElements(By.xpath(xpathToVerifyButton))) {
+//			System.out.println("--- verify button found.....");
+//			btnVerify.click();
+//		}
+
+		// switch to main page and click on login button
+//		driver.switchTo().defaultContent();
+//		WebElement loginButton = driver.findElement(By.xpath(xpathToLoginButton));
+//		loginButton.click();
+	}
+
+	private String solveCaptcha() throws Exception {
+		String xpathToReCaptchaiFrame = "//iframe[@title = 'reCAPTCHA']";
 		driver.switchTo().defaultContent();
+		System.out.println("--- Current frame: " + utils.getCurrentFrame(driver));
 		String captchaSrc = driver.findElement(By.xpath(xpathToReCaptchaiFrame)).getAttribute("src");
 		System.out.println("--- Captcha link: " + captchaSrc);
 
 		String captchaKey = utils.parseQueryUrl(captchaSrc).get("k").get(0);
 		System.out.println("--- Captcha key: " + captchaKey);
 
-//		String captchaResult = solveCaptcha(captchaKey);
-		String captchaResult = "03AGdBq2573JiKGLjk7F-VIQGxfUw8sqc66UQGWkoAu73VXAeOX4OdwbldtdnnZN9Ul3jmssTZBM93w_Jy2m2MscUOC0DuWi5Sec6hQZwGtp4GC5cw4S0gXLd47H5t-qqHZMFAWrOAxxfQq02B4gE9F429bLocvUiasMQ1dGJ-Uh0HiKZWgwLyHQAvCVyrP3ToPeuU10-89DusNMCWbLB_AilSvT7WVKRMq2ivZC80_jGY7FO0-4jTFnYRIwmOjT3zmj6xH92Gdu6ARmCJAShI8p1MMeuapRG12tJIfIX0Rs1pQ9ZV1ZGyOyUiC5c7ewwfwOZ1xXyWP-tNtuZl5twnSRBZ2jZAXL1gp_Gizq_oNfjbL94Wqxia-0oUrnHtkZFtIDJwFP0qmNbTFiQH-eKXFygmFK23AaQLWP9iEUlvUcTsli3jxePgKA0Psb13wLH0lZfJBMjgL6zUz5_WEGUVh9eZ_LYFw5-Thz5opyUvxiOQCkZkC7Ij9V200yCfDxtMgm8Gal1Q9l8NaX7JQTYbGNPVMCK-_IdsoQ";
+		String captchaResult = requestCaptchResult(captchaKey).trim();
 		System.out.println("--- Captcha result: " + captchaResult);
-
-		String script = "document.getElementById('g-recaptcha-response-1').innerHTML='" + captchaResult + "';";
-		utils.javascriptExecuter(driver, script);
-
-//		for (WebElement rcCheckmark : driver.findElements(By.xpath(xpathToReCaptchaCheckmark))) {
-//			rcCheckmark.click();
-//		}
-
-		WebElement loginButton = driver.findElement(By.xpath(xpathToLoginButton));
-		loginButton.click();
+		return captchaResult;
 	}
 
-	private String solveCaptcha(String key) throws Exception {
+	private String requestCaptchResult(String key) throws Exception {
 		String result = "";
 		String urlParameters = "";
 		String requestID = "";
